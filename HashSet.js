@@ -1,5 +1,4 @@
 import hash from "../hashMap/hash.js";
-import util from "util";
 import LinkedList from "../linked-list/linked-list.js";
 
 // HashSet factory function
@@ -35,11 +34,11 @@ export default function HashSet() {
 
   // Makes copy of current entries, clears all entries, doubles bucket capacity and repopulates HashMap
   function rePopulateHashSet() {
-    const currentEntries = entries();
+    const currentKeys = keys();
     clear();
     doubleBucketCapacity();
-    currentEntries.forEach((element) => {
-      set(element[0], element[1]);
+    currentKeys.forEach((key) => {
+      set(key);
     });
   }
 
@@ -60,7 +59,7 @@ export default function HashSet() {
       manageHashSetCapacity();
       buckets[index] = key;
       // Bucket already has key assigned.
-    } else if (buckets[index].key) {
+    } else if (typeof buckets[index] === "string") {
       // Key is equal to current key.
       if (buckets[index] === key) {
         return;
@@ -82,31 +81,14 @@ export default function HashSet() {
     }
   }
 
-  function get(key) {
-    const index = hash(key, currentBucketCapacity);
-    if (!buckets[index]) {
-      return null;
-    } else if (buckets[index].key === key) {
-      return buckets[index].value;
-    } else if (buckets[index] instanceof LinkedList) {
-      if (buckets[index].containsObjKey(key)) {
-        const objKeyValueIndex = buckets[index].findObjWithKey(key);
-        const keyValueObj = buckets[index].at(objKeyValueIndex);
-        return keyValueObj.value.value;
-      }
-    } else {
-      return null;
-    }
-  }
-
   function has(key) {
     const index = hash(key, currentBucketCapacity);
     if (!buckets[index]) {
       return false;
-    } else if (buckets[index].key === key) {
+    } else if (buckets[index] === key) {
       return true;
     } else if (buckets[index] instanceof LinkedList) {
-      if (buckets[index].containsObjKey(key)) {
+      if (buckets[index].contains(key)) {
         return true;
       }
     } else {
@@ -120,21 +102,19 @@ export default function HashSet() {
       return false;
     } else {
       const index = hash(key, currentBucketCapacity);
-      //If key exist in bucket without colisions remove by setting to undefined
+      // If key exist in bucket without colisions remove.
       // Use of Delete as want to maintain length of buckets array to mimic non dynamic array sizing
-      if (buckets[index].key === key) {
+      if (buckets[index] === key) {
         delete buckets[index];
         return true;
         // Remove from linkedList
       } else {
-        const objKeyValueIndex = buckets[index].findObjWithKey(key);
-        buckets[index].removeAt(objKeyValueIndex);
-        // If only one key value pair in LinkedList, LinkedList removed and Key Value object added in its place
+        const keyIndex = buckets[index].find(key);
+        buckets[index].removeAt(keyIndex);
+        // If only one key in LinkedList, LinkedList removed and key added in its place
         if (buckets[index].size() <= 1) {
-          const headNodeKeyValueObj = buckets[index].at(0);
-          const newKey = headNodeKeyValueObj.value.key;
-          const newValue = headNodeKeyValueObj.value.value;
-          buckets[index] = { key: newKey, value: newValue };
+          const headNodeKey = buckets[index].at(0).value;
+          buckets[index] = headNodeKey;
         }
         return true;
       }
@@ -144,7 +124,7 @@ export default function HashSet() {
   function length() {
     let count = 0;
     buckets.forEach((bucket) => {
-      if (bucket.key) {
+      if (typeof bucket === "string") {
         count++;
       } else if (bucket instanceof LinkedList) {
         count += bucket.size();
@@ -164,51 +144,22 @@ export default function HashSet() {
     const keysArray = [];
     buckets.forEach((bucket) => {
       // If bucket doesn't have any colisions push key to keys array(No linkedList)
-      if (bucket.key) {
-        keysArray.push(bucket.key);
+      if (typeof bucket === "string") {
+        keysArray.push(bucket);
         // If conatins LinkedList iterate through keys in linkedlist and push them to keys array
       } else if (bucket instanceof LinkedList) {
-        const arrayOfLinkedListKeys = bucket.arrayOfKeys();
+        const arrayOfLinkedListKeys = [];
+        let node = bucket.headNode;
+        while (node) {
+          arrayOfLinkedListKeys.push(node.value);
+          node = node.nextNode;
+        }
         arrayOfLinkedListKeys.forEach((element) => {
           keysArray.push(element);
         });
       }
     });
     return keysArray;
-  }
-
-  function values() {
-    const valuesArray = [];
-    buckets.forEach((bucket) => {
-      // If bucket doesn't have any colisions push value to values array(No linkedList)
-      if (bucket.key) {
-        valuesArray.push(bucket.value);
-        // If conatins LinkedList iterate through keys in linkedlist and push them to keys array
-      } else if (bucket instanceof LinkedList) {
-        const arrayOfLinkedListValues = bucket.arrayOfValues();
-        arrayOfLinkedListValues.forEach((element) => {
-          valuesArray.push(element);
-        });
-      }
-    });
-    return valuesArray;
-  }
-
-  function entries() {
-    const entriesArray = [];
-    buckets.forEach((bucket) => {
-      // If bucket doesn't have any colisions push value to values array(No linkedList)
-      if (bucket.key) {
-        entriesArray.push([bucket.key, bucket.value]);
-        // If conatins LinkedList iterate through keys in linkedlist and push them to keys array
-      } else if (bucket instanceof LinkedList) {
-        const arrayOfLinkedListEntries = bucket.arrayOfEntries();
-        arrayOfLinkedListEntries.forEach((element) => {
-          entriesArray.push(element);
-        });
-      }
-    });
-    return entriesArray;
   }
 
   function view() {
@@ -218,14 +169,11 @@ export default function HashSet() {
   return {
     set,
     view,
-    get,
     has,
     remove,
     length,
     clear,
     keys,
-    values,
-    entries,
     bucketsUsed,
   };
 }
